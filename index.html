@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bandon 2026</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}
+/* Layout: one-column scorecard ledger, sticky tab bar, bottom sheet for entry */
+:root{
+  --paper:#f7f9f4; --card:#ffffff; --ink:#18241c; --muted:#5d6c62; --line:#d6dfd3;
+  --fairway:#1d6a42; --fairway-ink:#ffffff; --flag:#e2ad17; --owe:#b0412c; --get:#1d6a42;
+  --wash:#e9f1e8;
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0e1611; --card:#152019; --ink:#e4ece5; --muted:#90a395; --line:#25352b;
+  --fairway:#4bb97d; --fairway-ink:#08120c; --flag:#efc443; --owe:#ee7c66; --get:#55c487; --wash:#1a2a20; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0e1611; --card:#152019; --ink:#e4ece5; --muted:#90a395; --line:#25352b;
+  --fairway:#4bb97d; --fairway-ink:#08120c; --flag:#efc443; --owe:#ee7c66; --get:#55c487; --wash:#1a2a20; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 96px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:640px;margin:0 auto}
+.num{font-variant-numeric:tabular-nums}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:.01em;text-wrap:balance;margin:0}
+h1{font-size:2rem;line-height:1.05}
+h2{font-size:1.35rem}
+.eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:600}
+.muted{color:var(--muted)}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--flag);outline-offset:2px}
+header.top{padding-top:20px;display:flex;flex-direction:column;gap:6px}
+.toprow{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.flagdot{display:inline-block;width:10px;height:10px;background:var(--flag);clip-path:polygon(0 0,100% 50%,0 100%);margin-right:6px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid var(--ink);margin-top:14px}
+.stats div{padding:8px 10px;border-right:1px solid var(--line);min-width:0}
+.stats div:last-child{border-right:0}
+.stats b{display:block;font-family:var(--display);font-size:1.5rem;line-height:1.1}
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);display:flex;gap:4px;padding-block:12px 10px;border-bottom:1px solid var(--line);margin-top:12px}
+.tab{flex:1;border:1px solid var(--line);background:var(--card);padding:8px 6px;border-radius:6px;font-weight:600;font-size:.92rem}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+section{padding-top:16px;display:flex;flex-direction:column;gap:14px}
+.banner{background:var(--wash);border-left:4px solid var(--flag);padding:10px 12px;font-size:.9rem}
+.day{display:flex;flex-direction:column}
+.day h3{font-size:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding-bottom:4px;border-bottom:1.5px solid var(--ink)}
+.row{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 2px;border-bottom:1px solid var(--line);background:none;border-left:0;border-right:0;border-top:0;text-align:left;width:100%}
+.row:hover{background:var(--wash)}
+.row .t{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.row .a{font-family:var(--display);font-size:1.2rem;text-align:right}
+.row .s{font-size:.85rem;color:var(--muted);min-width:0}
+.row .m{font-size:.85rem;text-align:right}
+.pill{display:inline-block;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:1px 6px;border:1px solid var(--line);border-radius:3px;margin-right:6px;color:var(--muted)}
+.pay .t{color:var(--muted);font-weight:500}
+.owe{color:var(--owe)} .get{color:var(--get)}
+.empty{border:1.5px dashed var(--line);padding:22px;text-align:center;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px}
+.scroll{overflow-x:auto}
+table.sc{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;border:1.5px solid var(--ink)}
+.sc th,.sc td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.sc th:first-child,.sc td:first-child{text-align:left}
+.sc thead th{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);border-bottom:1.5px solid var(--ink)}
+.sc tr.me td{background:var(--wash);font-weight:600}
+.bar{height:6px;background:var(--line);position:relative;margin-top:4px;min-width:80px}
+.bar i{position:absolute;top:0;bottom:0}
+.xfer{display:flex;flex-direction:column;gap:10px}
+.xfer .who{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.xfer .who b{font-family:var(--display);font-size:1.5rem}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--line);background:var(--card);padding:9px 14px;border-radius:6px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:6px;font-size:.92rem}
+.btn.primary{background:var(--fairway);color:var(--fairway-ink);border-color:var(--fairway)}
+.btn.ghost{background:none}
+.btn.danger{color:var(--owe);border-color:var(--owe);background:none}
+.fab{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:6;background:var(--fairway);color:var(--fairway-ink);border:0;border-radius:28px;padding:14px 20px;font-weight:700;font-size:1rem;box-shadow:0 6px 18px rgba(0,0,0,.22)}
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(5,12,8,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--paper);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:14px 14px 0 0;
+  padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
+.sheethead{display:flex;justify-content:space-between;align-items:center}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.85rem;font-weight:600;color:var(--muted);min-width:0}
+input.i,select.i{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:10px;font-size:1rem;color:var(--ink);width:100%;min-width:0}
+input.big{font-family:var(--display);font-size:1.8rem;padding:6px 10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--ink);border-radius:6px;overflow:hidden}
+.seg button{border:0;background:var(--card);padding:9px 2px;font-weight:600;font-size:.88rem;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--card);border-radius:16px;padding:6px 12px;font-weight:600;font-size:.9rem}
+.chip[aria-pressed="true"]{background:var(--fairway);color:var(--fairway-ink);border-color:var(--fairway)}
+.plist{display:flex;flex-direction:column}
+.prow{display:grid;grid-template-columns:1fr 120px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.prow span{min-width:0;overflow-wrap:anywhere;font-weight:600}
+.preview{background:var(--wash);padding:10px 12px;border-radius:6px;font-size:.92rem;font-variant-numeric:tabular-nums}
+.preview.err{border-left:4px solid var(--owe)}
+.hint{font-size:.82rem;color:var(--muted);font-weight:400}
+.mrow{display:grid;grid-template-columns:1.1fr 1fr 1fr auto;gap:8px;align-items:end;padding-bottom:10px;border-bottom:1px solid var(--line)}
+@media (max-width:520px){.mrow{grid-template-columns:1fr 1fr}.mrow .nm{grid-column:1/-1}.mrow .rm{grid-column:2;justify-self:end}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:6px;z-index:30;font-weight:600;max-width:calc(100% - 32px)}
+.copyline{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.9rem}
+.copyline code{background:var(--wash);padding:4px 8px;border-radius:4px;user-select:all;overflow-wrap:anywhere}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+</style>
+
+</head><body>
+<div class="wrap" id="app"><header class="top"><span class="eyebrow">Opening the ledger…</span></header></div>
+<div id="sheetRoot"></div>
+<div id="toastRoot"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+const CATS=["Dinner","Golf","Drinks","Lodging","Transport","Groceries","Bets","Other"];
+const MODES=[["equal","Equal"],["exact","Exact"],["items","Itemized"],["iou","IOU"]];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt=c=>(c<0?"-":"")+"$"+(Math.abs(c)/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const toCents=v=>{const n=parseFloat(String(v??"").replace(/[$,\s]/g,""));return isFinite(n)?Math.round(n*100):0};
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-5);
+const today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem("tab19:"+k))}catch{return null}};
+const lsSet=(k,v)=>{try{localStorage.setItem("tab19:"+k,JSON.stringify(v))}catch{}};
+const clone=o=>JSON.parse(JSON.stringify(o));
+
+/* split totalCents across [[id,weight]] with largest-remainder rounding, so shares always sum exactly */
+function allocate(total,weights){
+  const sum=weights.reduce((a,[,w])=>a+w,0),out={};
+  if(sum<=0||!weights.length)return out;
+  let given=0;const rem=[];
+  for(const[id,w]of weights){const x=total*w/sum,f=Math.floor(x);out[id]=f;given+=f;rem.push([id,x-f])}
+  rem.sort((a,b)=>b[1]-a[1]);
+  for(let i=0;i<total-given;i++)out[rem[i%rem.length][0]]+=1;
+  return out;
+}
+
+let S={mode:"loading",cfg:null,exps:[],canWrite:true,me:lsGet("me"),tab:"ledger",cfgSeen:false};
+
+/* ---------- storage: shared db when the viewer provides it, this device otherwise ---------- */
+/* ====== PASTE YOUR FIREBASE CONFIG HERE (Firebase console > Project settings > Your apps > Web app) ====== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBlZXXJqbcmtj1-TZxb_2T5RefWB9jTQNA",
+  authDomain: "bandon-2026-4cf0e.firebaseapp.com",
+  projectId: "bandon-2026-4cf0e",
+  appId: "1:353964750755:web:0b753f0d2aefdfff3a4c16"
+};
+const TRIP_ID = "bandon-2026-k7q2x9"; // change the random tail if you reuse this for another trip
+
+const Store={
+  db:null,
+  async init(){
+    if(FIREBASE_CONFIG.apiKey&&window.firebase){
+      try{
+        firebase.initializeApp(FIREBASE_CONFIG);
+        const root=firebase.firestore().collection("trips").doc(TRIP_ID);
+        this.cfgRef=root;this.expCol=root.collection("expenses");this.db=true;S.mode="shared";
+        root.onSnapshot(s=>{S.cfg=s.exists?clone(s.data()):null;S.cfgSeen=true;render()},onDbErr);
+        this.expCol.onSnapshot(q=>{S.exps=q.docs.map(d=>({id:d.id,...clone(d.data())}));render()},onDbErr);
+        return;
+      }catch(e){console.error(e)}
+    }
+    S.mode="local";const d=lsGet("data")||{};S.cfg=d.cfg||null;S.exps=d.exps||[];S.cfgSeen=true;render();
+  },
+  persistLocal(){lsSet("data",{cfg:S.cfg,exps:S.exps})},
+  async saveCfg(c){
+    if(this.db)return guard(()=>this.cfgRef.set(c));
+    S.cfg=c;this.persistLocal();render();return true;
+  },
+  async saveExp(e){
+    const{id,...body}=e;
+    if(this.db)return guard(()=>this.expCol.doc(id).set(body));
+    const i=S.exps.findIndex(x=>x.id===id);if(i>=0)S.exps[i]=e;else S.exps.push(e);
+    this.persistLocal();render();return true;
+  },
+  async delExp(id){
+    if(this.db)return guard(()=>this.expCol.doc(id).delete());
+    S.exps=S.exps.filter(x=>x.id!==id);this.persistLocal();render();return true;
+  }
+};
+async function guard(fn){
+  try{await fn();return true}
+  catch(e){
+    if(e&&e.code==="unavailable"){await new Promise(r=>setTimeout(r,400+Math.random()*600));try{await fn();return true}catch{}}
+    if(e&&(e.code==="invalid_argument"||e.code==="not_granted")){S.canWrite=false;render();toast("You have view-only access to this ledger.")}
+    else if(e&&e.code==="quota_exceeded")toast("The ledger is full. Delete a few old entries to add more.");
+    else toast("Couldn't save. Check your connection and try again.");
+    return false;
+  }
+}
+function onDbErr(){S.canWrite=false;render();toast("Lost connection to the shared ledger. Reload to reconnect.")}
+
+/* ---------- math ---------- */
+const members=()=>S.cfg?.members||[];
+const mname=id=>members().find(m=>m.id===id)?.name||"Someone";
+function balances(){
+  const b={};members().forEach(m=>b[m.id]={paid:0,share:0,net:0});
+  for(const e of S.exps){
+    if(e.kind==="payment"){if(b[e.from])b[e.from].net+=e.amount;if(b[e.to])b[e.to].net-=e.amount;continue}
+    if(b[e.payer]){b[e.payer].paid+=e.total;b[e.payer].net+=e.total}
+    for(const[id,c]of Object.entries(e.shares||{}))if(b[id]){b[id].share+=c;b[id].net-=c}
+  }
+  return b;
+}
+/* greedy: biggest debtor pays biggest creditor; at most n-1 transfers */
+function plan(b){
+  const cr=[],dr=[];
+  for(const[id,v]of Object.entries(b)){if(v.net>0)cr.push([id,v.net]);else if(v.net<0)dr.push([id,-v.net])}
+  cr.sort((a,c)=>c[1]-a[1]);dr.sort((a,c)=>c[1]-a[1]);
+  const t=[];let i=0,j=0;
+  while(i<dr.length&&j<cr.length){
+    const amt=Math.min(dr[i][1],cr[j][1]);
+    if(amt>0)t.push({from:dr[i][0],to:cr[j][0],amount:amt});
+    dr[i][1]-=amt;cr[j][1]-=amt;if(!dr[i][1])i++;if(!cr[j][1])j++;
+  }
+  return t;
+}
+const venmoUrl=(txn,handle,cents,note)=>`https://venmo.com/?txn=${txn}&recipients=${encodeURIComponent(handle)}&amount=${(cents/100).toFixed(2)}&note=${encodeURIComponent(note)}`;
+
+/* ---------- main render ---------- */
+function render(){
+  const app=$("#app");
+  if(S.mode==="loading"){app.innerHTML=`<header class="top"><span class="eyebrow">Opening the ledger…</span></header>`;return}
+  if(!S.cfg){app.innerHTML=setupView();return}
+  const b=balances(),spend=S.exps.filter(e=>e.kind!=="payment").reduce((a,e)=>a+e.total,0);
+  const me=S.me&&b[S.me]?b[S.me]:null;
+  const meStat=me?(me.net>0?`<b class="num get">${fmt(me.net)}</b><span class="eyebrow">You get back</span>`:me.net<0?`<b class="num owe">${fmt(-me.net)}</b><span class="eyebrow">You owe</span>`:`<b class="num">$0</b><span class="eyebrow">You're square</span>`)
+    :`<b class="num">${plan(b).length}</b><span class="eyebrow">Transfers to settle</span>`;
+  app.innerHTML=`
+  <header class="top">
+    <span class="eyebrow"><span class="flagdot"></span>${S.mode==="shared"?"Shared ledger":"Saved on this device"}</span>
+    <div class="toprow"><h1>${esc(S.cfg.trip||"Bandon 2026")}</h1></div>
+    <div class="stats">
+      <div><b class="num">${fmt(spend)}</b><span class="eyebrow">Trip spend</span></div>
+      <div><b class="num">${members().length}</b><span class="eyebrow">Players</span></div>
+      <div>${meStat}</div>
+    </div>
+  </header>
+  ${!S.canWrite?`<div class="banner" style="margin-top:12px">Can\'t save right now. Check your connection and reload.</div>`:""}
+  ${S.mode==="local"?`<div class="banner" style="margin-top:12px">This copy saves to this phone only. Add the Firebase config to share it live.</div>`:""}
+  <nav class="tabs" role="tablist">
+    ${[["ledger","Ledger"],["settle","Settle up"],["crew","Crew"]].map(([k,l])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}</button>`).join("")}
+  </nav>
+  ${S.tab==="ledger"?ledgerView():S.tab==="settle"?settleView(b):crewView()}
+  ${S.canWrite?`<button class="fab" data-act="add">+ Add expense</button>`:""}`;
+}
+
+function ledgerView(){
+  if(!S.exps.length)return `<section><div class="empty"><h2>No charges yet</h2><p>Someone put the first dinner on their card? Tap <b>Add expense</b>, enter the receipt, pick how to split it.</p></div></section>`;
+  const byDay={};
+  [...S.exps].sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.ts||0)-(a.ts||0)).forEach(e=>(byDay[e.date||"Undated"]??=[]).push(e));
+  const cats={};S.exps.filter(e=>e.kind!=="payment").forEach(e=>cats[e.cat]=(cats[e.cat]||0)+e.total);
+  const catLine=Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([c,v])=>`<span class="pill">${esc(c)} ${fmt(v)}</span>`).join("");
+  return `<section>
+    ${catLine?`<div>${catLine}</div>`:""}
+    ${Object.entries(byDay).map(([d,list])=>`<div class="day"><h3>${esc(dayLabel(d))}</h3>${list.map(rowView).join("")}</div>`).join("")}
+  </section>`;
+}
+function dayLabel(d){if(d==="Undated")return d;const t=new Date(d+"T12:00:00");return t.toLocaleDateString("en-US",{weekday:"long",month:"short",day:"numeric"})}
+function rowView(e){
+  if(e.kind==="payment")return `<button class="row pay" data-edit="${e.id}"><span class="t">${esc(mname(e.from))} paid ${esc(mname(e.to))}</span><span class="a num">${fmt(e.amount)}</span><span class="s">Settlement${e.via?" · "+esc(e.via):""}</span><span class="m"></span></button>`;
+  let mine="";
+  if(S.me){const sh=(e.shares||{})[S.me]||0,paid=e.payer===S.me?e.total:0,n=paid-sh;
+    if(n)mine=`<span class="${n>0?"get":"owe"} num">${n>0?"+":"−"}${fmt(Math.abs(n))}</span>`}
+  const modeLbl={equal:"split evenly",exact:"exact amounts",items:"itemized",iou:"IOU"}[e.meta?.mode]||"";
+  const people=Object.keys(e.shares||{}).length;
+  return `<button class="row" data-edit="${e.id}"><span class="t"><span class="pill">${esc(e.cat)}</span>${esc(e.desc)}</span><span class="a num">${fmt(e.total)}</span>
+    <span class="s">${e.meta?.mode==="iou"?`${esc(mname(Object.keys(e.shares)[0]))} owes ${esc(mname(e.payer))}`:`${esc(mname(e.payer))} paid · ${modeLbl}, ${people} ${people===1?"person":"people"}`}</span><span class="m">${mine}</span></button>`;
+}
+
+function settleView(b){
+  const t=plan(b),max=Math.max(1,...Object.values(b).map(v=>Math.abs(v.net)));
+  const rows=members().map(m=>{const v=b[m.id],w=Math.abs(v.net)/max*50;
+    return `<tr class="${m.id===S.me?"me":""}"><td>${esc(m.name)}<div class="bar"><i style="left:${v.net<0?50-w:50}%;width:${w}%;background:var(${v.net<0?"--owe":"--get"})"></i></div></td><td>${fmt(v.paid)}</td><td>${fmt(v.share)}</td><td class="${v.net>0?"get":v.net<0?"owe":""}">${v.net>0?"+":""}${fmt(v.net)}</td></tr>`}).join("");
+  const note=`${S.cfg.trip||"Bandon 2026"} settle-up`;
+  const xfers=t.length?t.map((x,i)=>{
+    const f=members().find(m=>m.id===x.from),to=members().find(m=>m.id===x.to);
+    return `<div class="card xfer">
+      <div class="who"><span><b>${esc(f.name)}</b> → <b>${esc(to.name)}</b></span><b class="num">${fmt(x.amount)}</b></div>
+      <div class="actions">
+        ${to.venmo?`<a class="btn primary" href="${venmoUrl("pay",to.venmo,x.amount,note)}" target="_blank" rel="noopener">Pay on Venmo</a>`:""}
+        ${f.venmo?`<a class="btn" href="${venmoUrl("charge",f.venmo,x.amount,note)}" target="_blank" rel="noopener">Request on Venmo</a>`:""}
+        ${S.canWrite?`<button class="btn ghost" data-paid="${i}">Mark paid</button>`:""}
+      </div>
+      ${to.zelle?`<div class="copyline"><span class="muted">Zelle ${esc(to.name)}:</span><code>${esc(to.zelle)}</code><button class="btn ghost" data-copy="${esc(to.zelle)}">Copy</button></div>`:""}
+      ${!to.venmo&&!to.zelle?`<span class="hint">Add ${esc(to.name)}'s Venmo or Zelle in Crew to get pay buttons here.</span>`:""}
+    </div>`}).join(""):`<div class="empty"><h2>All square</h2><p>Nobody owes anybody. Enjoy the 19th hole.</p></div>`;
+  return `<section>
+    <div class="scroll"><table class="sc"><thead><tr><th>Player</th><th>Paid</th><th>Share</th><th>Net</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="toprow"><h2>${t.length?`${t.length} transfer${t.length>1?"s":""} settles everything`:"Settle up"}</h2>${t.length?`<button class="btn" data-act="copysummary">Copy for group text</button>`:""}</div>
+    ${xfers}
+  </section>`;
+}
+
+function crewView(){
+  const ms=members();
+  return `<section>
+    <label class="f">I am<select class="i" id="meSel"><option value="">Pick your name</option>${ms.map(m=>`<option value="${m.id}" ${m.id===S.me?"selected":""}>${esc(m.name)}</option>`).join("")}</select><span class="hint">Highlights what you owe. Saved on this device only.</span></label>
+    ${S.canWrite?`<div class="card" style="display:flex;flex-direction:column;gap:12px">
+      <label class="f">Trip name<input class="i" id="tripName" value="${esc(S.cfg.trip)}"></label>
+      <div id="mlist" style="display:flex;flex-direction:column;gap:10px">${ms.map(memberRow).join("")}</div>
+      <div class="actions"><button class="btn" data-act="addmember">+ Add player</button><button class="btn primary" data-act="savecrew">Save crew</button></div>
+    </div>`:`<div class="card">${ms.map(m=>`<div class="prow"><span>${esc(m.name)}</span><span class="hint">${m.venmo?"@"+esc(m.venmo):""} ${m.zelle?"· Zelle":""}</span></div>`).join("")}</div>`}
+  </section>`;
+}
+const memberRow=m=>`<div class="mrow" data-mid="${m.id}">
+  <label class="f nm">Name<input class="i" data-k="name" value="${esc(m.name)}"></label>
+  <label class="f">Venmo<input class="i" data-k="venmo" placeholder="username" value="${esc(m.venmo)}" autocapitalize="off"></label>
+  <label class="f">Zelle<input class="i" data-k="zelle" placeholder="phone or email" value="${esc(m.zelle)}" autocapitalize="off"></label>
+  <button class="btn ghost rm" data-rm="${m.id}" aria-label="Remove ${esc(m.name)}">✕</button></div>`;
+
+function setupView(){
+  if(!S.canWrite)return `<header class="top"><h1>Bandon 2026</h1></header><section><div class="empty">The organizer hasn't set up this trip yet. Check back once they add the crew.</div></section>`;
+  const rows=Array.from({length:8},(_,i)=>`<input class="i" data-setup="${i}" placeholder="Player ${i+1}" ${i===0?'value="Dave"':""}>`).join("");
+  return `<header class="top"><span class="eyebrow"><span class="flagdot"></span>New trip</span><h1>Bandon 2026</h1>
+    <p class="muted">One person puts dinner on a card, everyone else's share lands here, and settle-up turns it into the fewest Venmo payments.</p></header>
+    <section><div class="card" style="display:flex;flex-direction:column;gap:10px">
+      <label class="f">Trip name<input class="i" id="setupTrip" value="Bandon 2026"></label>
+      <span class="f">The crew <span class="hint">Leave blanks empty. Add Venmo and Zelle later under Crew.</span></span>
+      <div class="grid2">${rows}</div>
+      <button class="btn primary" data-act="create" style="justify-content:center">Start the ledger</button>
+    </div></section>`;
+}
+
+/* ---------- expense sheet ---------- */
+let F=null; // form state while sheet open
+function openSheet(e){
+  const ms=members();
+  if(e&&e.kind==="payment"){
+    $("#sheetRoot").innerHTML=`<div class="scrim" data-close="1"><div class="sheet" role="dialog" aria-label="Settlement">
+      <div class="sheethead"><h2>Settlement</h2><button class="btn ghost" data-act="close">Close</button></div>
+      <p>${esc(mname(e.from))} paid ${esc(mname(e.to))} <b class="num">${fmt(e.amount)}</b>.</p>
+      ${S.canWrite?`<button class="btn danger" data-del="${e.id}">Undo this payment</button>`:""}</div></div>`;return;
+  }
+  const m=e?.meta||{};
+  F={id:e?.id||null,mode:m.mode||"equal",
+    parts:new Set(m.participants||ms.map(x=>x.id)),
+    exact:m.exact||{},items:m.items||{},shared:m.shared||"",tax:m.tax||"",tip:m.tip||"",owes:m.owes||"",
+    sharedParts:new Set(m.sharedParts||ms.map(x=>x.id))};
+  const payer=e?.payer||S.me||ms[0]?.id;
+  $("#sheetRoot").innerHTML=`<div class="scrim" data-close="1"><div class="sheet" role="dialog" aria-label="Expense">
+    <div class="sheethead"><h2>${e?"Edit expense":"Add expense"}</h2><button class="btn ghost" data-act="close">Close</button></div>
+    <label class="f">What was it<input class="i" id="fDesc" placeholder="Dinner at the clubhouse" value="${esc(e?.desc)}"></label>
+    <div class="grid2">
+      <label class="f">Category<select class="i" id="fCat">${CATS.map(c=>`<option ${c===(e?.cat||"Dinner")?"selected":""}>${c}</option>`).join("")}</select></label>
+      <label class="f">Date<input class="i" type="date" id="fDate" value="${e?.date||today()}"></label>
+    </div>
+    <div class="seg" role="group" aria-label="How to split">${MODES.map(([k,l])=>`<button type="button" data-mode="${k}" aria-pressed="${F.mode===k}">${l}</button>`).join("")}</div>
+    <div class="grid2">
+      <label class="f"><span id="payerLbl">Paid by</span><select class="i" id="fPayer">${ms.map(x=>`<option value="${x.id}" ${x.id===payer?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label>
+      <label class="f" id="totalWrap"><span id="totalLbl">Total on the card</span><input class="i big num" id="fTotal" inputmode="decimal" placeholder="0.00" value="${e?(e.total/100).toFixed(2):""}"></label>
+    </div>
+    <div id="modeArea"></div>
+    <div class="preview" id="preview"></div>
+    <div class="actions"><button class="btn primary" data-act="saveexp">${e?"Save changes":"Add to ledger"}</button>${e&&S.canWrite?`<button class="btn danger" data-del="${e.id}">Delete</button>`:""}</div>
+  </div></div>`;
+  renderMode();
+  if(!e)setTimeout(()=>$("#fDesc")?.focus(),60);
+}
+function chipList(set,attr){return `<div class="chips">${members().map(x=>`<button type="button" class="chip" ${attr}="${x.id}" aria-pressed="${set.has(x.id)}">${esc(x.name)}</button>`).join("")}</div>`}
+function renderMode(){
+  const ms=members(),a=$("#modeArea");if(!a)return;
+  $("#totalWrap").hidden=F.mode==="items";
+  $("#payerLbl").textContent=F.mode==="iou"?"Owed to":"Paid by";
+  $("#totalLbl").textContent=F.mode==="iou"?"Amount":"Total on the card";
+  $("#fTotal").placeholder="0.00";
+  if(F.mode==="equal")a.innerHTML=`<span class="f">Split between <span class="hint">tap to leave someone out</span></span>${chipList(F.parts,"data-part")}`;
+  else if(F.mode==="exact")a.innerHTML=`<span class="f">Each person's amount <span class="hint">must add up to the total</span></span><div class="plist">${ms.map(x=>`<div class="prow"><span>${esc(x.name)}</span><input class="i num" inputmode="decimal" data-exact="${x.id}" placeholder="0.00" value="${esc(F.exact[x.id]||"")}"></div>`).join("")}</div>`;
+  else if(F.mode==="items")a.innerHTML=`<span class="f">What each person ordered <span class="hint">pre-tax, from the receipt</span></span>
+    <div class="plist">${ms.map(x=>`<div class="prow"><span>${esc(x.name)}</span><input class="i num" inputmode="decimal" data-item="${x.id}" placeholder="0.00" value="${esc(F.items[x.id]||"")}"></div>`).join("")}</div>
+    <label class="f">Shared items <span class="hint">apps, bottles, the round nobody claims</span><input class="i num" id="fShared" inputmode="decimal" placeholder="0.00" value="${esc(F.shared)}"></label>
+    ${chipList(F.sharedParts,"data-spart")}
+    <div class="grid2"><label class="f">Tax<input class="i num" id="fTax" inputmode="decimal" placeholder="0.00" value="${esc(F.tax)}"></label>
+    <label class="f">Tip<input class="i num" id="fTip" inputmode="decimal" placeholder="20% or 45.00" value="${esc(F.tip)}"></label></div>
+    <span class="hint">Tax and tip are split in proportion to what each person ordered.</span>`;
+  else a.innerHTML=`<label class="f">Who owes<select class="i" id="fOwes"><option value="">Pick a player</option>${ms.map(x=>`<option value="${x.id}" ${x.id===F.owes?"selected":""}>${esc(x.name)}</option>`).join("")}</select></label><span class="hint">For bets, a green fee someone covered, or any one-to-one debt.</span>`;
+  document.querySelectorAll("[data-mode]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.mode===F.mode));
+  updatePreview();
+}
+function readForm(){
+  if(F.mode==="exact")document.querySelectorAll("[data-exact]").forEach(i=>F.exact[i.dataset.exact]=i.value);
+  if(F.mode==="items"){document.querySelectorAll("[data-item]").forEach(i=>F.items[i.dataset.item]=i.value);F.shared=$("#fShared").value;F.tax=$("#fTax").value;F.tip=$("#fTip").value}
+  if(F.mode==="iou")F.owes=$("#fOwes").value;
+}
+function compute(){
+  readForm();
+  const payer=$("#fPayer").value,ms=members();
+  let total=toCents($("#fTotal").value),shares={},err="",detail="";
+  if(F.mode==="equal"){
+    const p=ms.filter(x=>F.parts.has(x.id)).map(x=>[x.id,1]);
+    if(!p.length)err="Pick at least one person.";else if(total<=0)err="Enter the total.";
+    else{shares=allocate(total,p);detail=`${p.length} people · ${fmt(Math.floor(total/p.length))}${total%p.length?"–"+fmt(Math.ceil(total/p.length)):""} each`}
+  }else if(F.mode==="exact"){
+    ms.forEach(x=>{const c=toCents(F.exact[x.id]);if(c)shares[x.id]=c});
+    const sum=Object.values(shares).reduce((a,c)=>a+c,0);
+    if(total<=0)err="Enter the total.";else if(sum!==total)err=`${fmt(Math.abs(total-sum))} ${sum<total?"still unassigned":"over the total"}.`;
+    else detail=`Adds up to ${fmt(total)}.`;
+  }else if(F.mode==="items"){
+    const base={};ms.forEach(x=>{const c=toCents(F.items[x.id]);if(c)base[x.id]=c});
+    const shared=toCents(F.shared),sp=ms.filter(x=>F.sharedParts.has(x.id)).map(x=>[x.id,1]);
+    if(shared>0){if(!sp.length)err="Pick who splits the shared items.";else{const s=allocate(shared,sp);for(const[id,c]of Object.entries(s))base[id]=(base[id]||0)+c}}
+    const pre=Object.values(base).reduce((a,c)=>a+c,0);
+    const tipStr=String(F.tip||"").trim(),tip=tipStr.endsWith("%")?Math.round(pre*parseFloat(tipStr)/100||0):toCents(tipStr);
+    const extra=toCents(F.tax)+tip;
+    total=pre+extra;
+    if(!err&&pre<=0)err="Enter what at least one person ordered.";
+    if(!err){const ex=allocate(extra,Object.entries(base));shares={};for(const[id,c]of Object.entries(base))shares[id]=c+(ex[id]||0);
+      detail=`Card charge ${fmt(total)} (food ${fmt(pre)}, tax+tip ${fmt(extra)})<br>`+Object.entries(shares).map(([id,c])=>`${esc(mname(id))} ${fmt(c)}`).join(" · ")}
+  }else{
+    if(!F.owes)err="Pick who owes.";else if(F.owes===payer)err="Someone can't owe themselves.";else if(total<=0)err="Enter the amount.";
+    else{shares={[F.owes]:total};detail=`${esc(mname(F.owes))} owes ${esc(mname(payer))} ${fmt(total)}.`}
+  }
+  if(!err&&F.mode!=="iou"&&S.me&&shares[S.me]!==undefined&&F.mode!=="items")detail+=` Your share ${fmt(shares[S.me])}.`;
+  return{total,shares,payer,err,detail};
+}
+function updatePreview(){const r=compute(),p=$("#preview");p.className="preview"+(r.err?" err":"");p.innerHTML=r.err||r.detail||"&nbsp;"}
+async function saveExpense(){
+  const r=compute();if(r.err){updatePreview();return}
+  const desc=$("#fDesc").value.trim()||($("#fCat").value+(F.mode==="iou"?" IOU":""));
+  const prev=F.id?S.exps.find(x=>x.id===F.id):null;
+  const e={id:F.id||uid(),kind:"expense",desc,cat:$("#fCat").value,date:$("#fDate").value||today(),payer:r.payer,total:r.total,shares:r.shares,ts:prev?.ts||Date.now(),
+    meta:{mode:F.mode,participants:[...F.parts],exact:F.exact,items:F.items,shared:F.shared,tax:F.tax,tip:F.tip,owes:F.owes,sharedParts:[...F.sharedParts]}};
+  const btn=document.querySelector('[data-act="saveexp"]');btn.disabled=true;
+  const wasEdit=!!F.id;if(await Store.saveExp(e)){closeSheet();toast(wasEdit?"Saved":"Added to the ledger");S.tab="ledger";render()}else btn.disabled=false;
+}
+function closeSheet(){$("#sheetRoot").innerHTML="";F=null}
+
+/* ---------- crew ---------- */
+function readCrew(){
+  return [...document.querySelectorAll(".mrow")].map(r=>({id:r.dataset.mid,
+    name:r.querySelector('[data-k="name"]').value.trim(),
+    venmo:r.querySelector('[data-k="venmo"]').value.trim().replace(/^@/,""),
+    zelle:r.querySelector('[data-k="zelle"]').value.trim()}));
+}
+const used=id=>S.exps.some(e=>e.payer===id||e.from===id||e.to===id||(e.shares&&id in e.shares));
+
+let toastT;function toast(msg){$("#toastRoot").innerHTML=`<div class="toast" role="status">${esc(msg)}</div>`;clearTimeout(toastT);toastT=setTimeout(()=>$("#toastRoot").innerHTML="",2600)}
+async function copy(text,el){
+  try{await navigator.clipboard.writeText(text);toast("Copied")}
+  catch{const r=document.createRange();const tgt=el?.previousElementSibling||el;if(tgt){r.selectNodeContents(tgt);const s=getSelection();s.removeAllRanges();s.addRange(r)}toast("Selected. Copy it from the menu.")}
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click",async ev=>{
+  const t=ev.target.closest("button,[data-close]");if(!t)return;
+  if(t.dataset.close&&ev.target!==t)return;
+  if(t.dataset.close){closeSheet();return}
+  if(t.dataset.tab){S.tab=t.dataset.tab;render();return}
+  if(t.dataset.edit){openSheet(S.exps.find(x=>x.id===t.dataset.edit));return}
+  if(t.dataset.mode){readForm();F.mode=t.dataset.mode;renderMode();return}
+  if(t.dataset.part){const s=F.parts;s.has(t.dataset.part)?s.delete(t.dataset.part):s.add(t.dataset.part);t.setAttribute("aria-pressed",s.has(t.dataset.part));updatePreview();return}
+  if(t.dataset.spart){const s=F.sharedParts;s.has(t.dataset.spart)?s.delete(t.dataset.spart):s.add(t.dataset.spart);t.setAttribute("aria-pressed",s.has(t.dataset.spart));updatePreview();return}
+  if(t.dataset.copy){copy(t.dataset.copy,t);return}
+  if(t.dataset.del){
+    if(t.dataset.confirm){if(await Store.delExp(t.dataset.del)){closeSheet();toast("Deleted")}}
+    else{t.dataset.confirm="1";t.textContent="Tap again to delete"}
+    return;
+  }
+  if(t.dataset.paid!==undefined){
+    const x=plan(balances())[+t.dataset.paid];if(!x)return;
+    if(await Store.saveExp({id:uid(),kind:"payment",from:x.from,to:x.to,amount:x.amount,date:today(),ts:Date.now(),via:""}))toast(`${mname(x.from)} → ${mname(x.to)} marked paid`);
+    return;
+  }
+  if(t.dataset.rm){
+    if(used(t.dataset.rm)){toast("This player has charges on the ledger. Remove those first.");return}
+    t.closest(".mrow").remove();return;
+  }
+  switch(t.dataset.act){
+    case "add":openSheet(null);break;
+    case "close":closeSheet();break;
+    case "saveexp":saveExpense();break;
+    case "create":{
+      const names=[...document.querySelectorAll("[data-setup]")].map(i=>i.value.trim()).filter(Boolean);
+      if(names.length<2){toast("Add at least two players.");break}
+      const ms=names.map(n=>({id:uid(),name:n,venmo:"",zelle:""}));
+      if(await Store.saveCfg({trip:$("#setupTrip").value.trim()||"Bandon 2026",members:ms})){S.me=ms[0].id;lsSet("me",S.me);render()}
+      break;}
+    case "addmember":{const d=document.createElement("div");d.innerHTML=memberRow({id:uid(),name:"",venmo:"",zelle:""});$("#mlist").append(d.firstElementChild);break}
+    case "savecrew":{
+      const ms=readCrew().filter(m=>m.name);
+      if(ms.length<2){toast("Keep at least two players.");break}
+      if(await Store.saveCfg({...S.cfg,trip:$("#tripName").value.trim()||"Bandon 2026",members:ms}))toast("Crew saved");
+      break;}
+    case "copysummary":{
+      const lines=plan(balances()).map(x=>{const to=members().find(m=>m.id===x.to);return `${mname(x.from)} → ${mname(x.to)}: ${fmt(x.amount)}${to?.venmo?` (Venmo @${to.venmo})`:to?.zelle?` (Zelle ${to.zelle})`:""}`});
+      copy(`${S.cfg.trip} settle-up\n`+lines.join("\n"),t);break;}
+  }
+});
+document.addEventListener("input",ev=>{if(F&&ev.target.closest(".sheet"))updatePreview()});
+document.addEventListener("change",ev=>{
+  if(ev.target.id==="meSel"){S.me=ev.target.value||null;lsSet("me",S.me);render()}
+  else if(F&&ev.target.closest(".sheet"))updatePreview();
+});
+document.addEventListener("keydown",ev=>{if(ev.key==="Escape"&&$("#sheetRoot").innerHTML)closeSheet()});
+
+render();
+Store.init();
+</script>
+
+</body></html>
